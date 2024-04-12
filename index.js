@@ -4,13 +4,14 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const multer = require('multer');
 const cors = require('cors');
-const upload = multer({dest: 'uploads/'});
+const upload = multer({ dest: 'uploads/' });
 const CompanyModel = require('./models/Company');
 const ProductModel = require('./models/Product');
 const UserModel = require('./models/User');
 const auth = require('./middleware/auth');
 const ShoppingCartModel = require('./models/ShoppingCart');
 const PastShoppingCartModel = require('./models/PastShoppingCarts');
+const { exec } = require('child_process');
 
 app.use(cors());
 app.use(express.json());
@@ -30,12 +31,12 @@ app.post('/admin/signup', (req, res) => {
         });
 });
 app.post('/admin/login', (req, res) => {
-    CompanyModel.find({email: req.body.email})
+    CompanyModel.find({ email: req.body.email })
         .then(company => {
             if (req.body.password == company[0].password) {
                 res.json(company);
             } else {
-                res.json({message: 'şifre yanlış'});
+                res.json({ message: 'şifre yanlış' });
             }
         })
         .catch(err => {
@@ -54,7 +55,7 @@ app.post('/admin/add', (req, res) => {
 });
 
 app.post('/admin/find', (req, res) => {
-    ProductModel.find({companyId: req.body.companyId})
+    ProductModel.find({ companyId: req.body.companyId })
         .then(products => {
             res.json(products);
         })
@@ -63,8 +64,8 @@ app.post('/admin/find', (req, res) => {
         });
 });
 app.post('/admin/delete', (req, res) => {
-    const {_id} = req.body;
-    ProductModel.findByIdAndDelete({_id})
+    const { _id } = req.body;
+    ProductModel.findByIdAndDelete({ _id })
         .then(product => {
             res.json(product);
         })
@@ -73,13 +74,13 @@ app.post('/admin/delete', (req, res) => {
         });
 });
 app.post('/admin/update', (req, res) => {
-    const {_id, companyId, category, image, barkod, name, price, date} =
+    const { _id, companyId, category, image, barkod, name, price, date } =
         req.body;
 
     ProductModel.findByIdAndUpdate(
-        {_id},
-        {companyId, category, image, barkod, name, price, date},
-        {new: true},
+        { _id },
+        { companyId, category, image, barkod, name, price, date },
+        { new: true },
     )
         .then(product => {
             res.json(product);
@@ -107,6 +108,62 @@ app.post('/admin/upload', upload.single('file'), (req, res) => {
         fileName: fileName,
         filePath: filePath,
     });
+    exec('python3 video_main.py', (error, stdout, stderr) => {
+        if (error) {
+            console.error(`Hata oluştu: ${error.message}`);
+            return;
+        }
+        if (stderr) {
+            console.error(`Hata çıktısı: ${stderr}`);
+            return;
+        }
+    });
+
+});
+app.post('/admin/run', (req, res) => {
+    /*const imageId = "ca03439b03ff770e14001529104437a6"
+    exec(`python3 video_front_end.py ${imageId}`, (error, stdout, stderr) => {
+        if (error) {
+            console.error(`Hata oluştu: ${error.message}`);
+            return;
+        }
+        if (stderr) {
+            console.error(`Hata çıktısı: ${stderr}`);
+            return;
+        }
+        console.log(`Benzer resim ID'leri: ${stdout}`);
+    });
+    */
+    /*exec(`python3 video_main.py single ${imageId}`, (error, stdout, stderr) => {
+        if (error) {
+            console.error(`Hata oluştu: ${error.message}`);
+            return;
+        }
+        if (stderr) {
+            console.error(`Hata çıktısı: ${stderr}`);
+            return;
+        }
+        //const doubleArray = stdout.map(str => parseFloat(str));
+        //console.log(doubleArray);
+        //console.log(stdout);
+
+        const numpyArrayString = stdout.trim();
+        const numpyArray = JSON.parse(numpyArrayString);
+        console.log(numpyArray);
+    });*/
+    const imageId = "fbc6434bec24b2391d3ee399baebc74b";
+    exec(`python3 video_front_end.py single ${imageId}`, (error, stdout, stderr) => {
+        if (error) {
+            console.error(`Hata oluştu: ${error.message}`);
+            return;
+        }
+        if (stderr) {
+            console.error(`Hata çıktısı: ${stderr}`);
+            return;
+        }
+        console.log(stdout);
+    });
+
 });
 
 app.use('/uploads', express.static('uploads'));
@@ -114,8 +171,8 @@ app.use('/uploads', express.static('uploads'));
 //************************************************************************* */
 
 app.post('/user/signup', async (req, res) => {
-    const {name, email, password} = req.body;
-    let user = await UserModel.findOne({email: email});
+    const { name, email, password } = req.body;
+    let user = await UserModel.findOne({ email: email });
 
     if (user) return res.send('bu mail zaten var');
 
@@ -133,25 +190,25 @@ app.post('/user/signup', async (req, res) => {
 });
 
 app.post('/user/login', async (req, res) => {
-    const {email, password} = req.body;
-    let user = await UserModel.findOne({email: email});
+    const { email, password } = req.body;
+    let user = await UserModel.findOne({ email: email });
 
     if (!user)
-        return res.send({user: null, message: 'hatalı şifre yada email'});
+        return res.send({ user: null, message: 'hatalı şifre yada email' });
 
     const isSuccess = await bcrypt.compare(password, user.password);
 
     if (!isSuccess)
-        return res.send({user: null, message: 'hatalı şifre yada email'});
+        return res.send({ user: null, message: 'hatalı şifre yada email' });
 
     const token = user.createAuthToken();
-    res.header('x-auth-token', token).send({user});
+    res.header('x-auth-token', token).send({ user });
 });
 
 app.post('/user/updateShoppingCart', auth, async (req, res) => {
-    const {_id, shoppingCarts} = req.body;
+    const { _id, shoppingCarts } = req.body;
 
-    let basket = await ShoppingCartModel.findOne({_id});
+    let basket = await ShoppingCartModel.findOne({ _id });
     if (!basket) {
         ShoppingCartModel.create(req.body)
             .then(basket => {
@@ -164,7 +221,7 @@ app.post('/user/updateShoppingCart', auth, async (req, res) => {
         const updated = {
             shoppingCarts: shoppingCarts,
         };
-        await ShoppingCartModel.updateOne({_id}, {$set: updated})
+        await ShoppingCartModel.updateOne({ _id }, { $set: updated })
             .then(basket => {
                 res.json(basket);
             })
@@ -175,8 +232,8 @@ app.post('/user/updateShoppingCart', auth, async (req, res) => {
 });
 
 app.post('/user/getShoppingCart', auth, async (req, res) => {
-    const {_id} = req.body;
-    const existingRecord = await ShoppingCartModel.findOne({_id});
+    const { _id } = req.body;
+    const existingRecord = await ShoppingCartModel.findOne({ _id });
 
     if (existingRecord) {
         res.send(existingRecord);
@@ -186,13 +243,13 @@ app.post('/user/getShoppingCart', auth, async (req, res) => {
 });
 
 app.post('/user/pay', auth, async (req, res) => {
-    const {_id, shoppingCarts} = req.body;
-    let basket = await PastShoppingCartModel.findOne({_id});
+    const { _id, shoppingCarts } = req.body;
+    let basket = await PastShoppingCartModel.findOne({ _id });
 
     if (!basket) {
         PastShoppingCartModel.create({
             _id,
-            pastShoppingCarts: [{shoppingCarts}],
+            pastShoppingCarts: [{ shoppingCarts }],
         })
             .then(basket => {
                 res.json(basket);
@@ -202,9 +259,9 @@ app.post('/user/pay', auth, async (req, res) => {
             });
     } else {
         await PastShoppingCartModel.findByIdAndUpdate(
-            {_id},
-            {$push: {pastShoppingCarts: [{shoppingCarts}]}},
-            {new: true},
+            { _id },
+            { $push: { pastShoppingCarts: [{ shoppingCarts }] } },
+            { new: true },
         )
             .then(basket => {
                 res.json(basket);
@@ -216,8 +273,8 @@ app.post('/user/pay', auth, async (req, res) => {
 });
 
 app.post('/user/getPastShoppingCart', auth, async (req, res) => {
-    const {_id} = req.body;
-    const existingRecord = await PastShoppingCartModel.findOne({_id});
+    const { _id } = req.body;
+    const existingRecord = await PastShoppingCartModel.findOne({ _id });
 
     if (existingRecord) {
         res.send(existingRecord);
@@ -225,6 +282,10 @@ app.post('/user/getPastShoppingCart', auth, async (req, res) => {
         res.send([]);
     }
 });
+
+//************************************************************* */
+//const selectedImagePath="uploads/"
+//const selectedImage = cv.imread(selectedImagePath);
 
 app.listen(3000, () => {
     console.log('listening on port 3000');
