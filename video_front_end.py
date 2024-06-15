@@ -25,6 +25,14 @@ transform = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
+#resmin boyutlarını göster
+def get_image_resolution(image_path):
+    # Resmi aç
+    with Image.open(image_path) as img:
+        # Resmin genişliğini ve yüksekliğini al
+        width, height = img.size
+        return width, height
+
 # Özellik vektörünü almak için "avgpool" katmanının çıktısını saklamak için bir dictionary oluştur
 activation = {}
 
@@ -41,12 +49,15 @@ model.avgpool.register_forward_hook(get_activation("avgpool"))
 vecs = np.load("all_vecs.npy", allow_pickle=True)
 names = np.load("all_names.npy", allow_pickle=True)
 
-uploads_folder = "uploads/"
+uploads_folder = "uploads2/"
 
 def single(image_id):
+    #x=get_image_resolution(uploads_folder+image_id)
+    #print(x)
     try:
         img = Image.open(uploads_folder + image_id)
-        img = transform(img)  # Resmi modele uygun formata dönüştür
+        rotated_img = img.rotate(270) 
+        img = transform(rotated_img)  # Resmi modele uygun formata dönüştür
         with torch.no_grad():
             out = model(img.unsqueeze(0))  # Modelden geçir
             vec = activation["avgpool"].numpy().squeeze()  # Özellik vektörünü al
@@ -56,46 +67,34 @@ def single(image_id):
         return None
 
 def find_similar(vector):
-    # Resim ID'sine karşılık gelen özellik vektörünü bul
-    #idx = np.where(names == image_id)[0]
-    #if len(idx) == 0:
-    #    return []  # Eğer geçersiz bir resim ID'si verildiyse boş listeyi döndür
-    #target_vec = vecs[idx]
-
     # Tüm özellik vektörleri ile verilen resmin özellik vektörü arasındaki benzerlikleri hesapla
     distances = cdist(vector, vecs).squeeze()
     
     # En yakın 5 benzer resmin indislerini bul
-    top5_indices = distances.argsort()[1:3]
+    top5_indices = distances.argsort()
 
     # İndislere karşılık gelen resim ID'lerini al ve döndür
     similar_image_ids = [names[i] for i in top5_indices]
     return similar_image_ids
 
-# Örnek bir kullanım
-#image_id = "ce98f689f6fba91893733463a96258a6"  # Aranacak resmin ID'si
-#similar_ids = find_similar(image_id)
-#print("Benzer resim ID'leri:", similar_ids)
-
-
-#37a6 portakal
-#c74b portakal
-#600c portakal
-#5ceb ispanak
-#58a6 ispanak
-#5f90 ispanak
-
-
-# Komut satırı argümanını al
-#if len(sys.argv) != 2:
-#    print("Kullanım: python3 script.py <resim_id>")
-#    sys.exit(1)
-
 image_id = sys.argv[2]
 vector = single(image_id)
 similar_ids = find_similar(vector)
-print("Benzer resim ID'leri:", similar_ids)
-#print("vector:", vector)
+print(similar_ids)
+
+
+#973b 1 air
+#1cf5 2 kulaklik
+#9898 3 air
+#e33c 4 air
+#665f 5 kulaklik
+#d892 6 kulaklik
+#86cf 7 deo
+#11df 8 deo
+
+
+
+
 
 
 

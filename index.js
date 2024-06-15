@@ -5,6 +5,7 @@ const bcrypt = require('bcrypt');
 const multer = require('multer');
 const cors = require('cors');
 const upload = multer({ dest: 'uploads/' });
+const upload2 = multer({ dest: 'uploads2/' });
 const CompanyModel = require('./models/Company');
 const ProductModel = require('./models/Product');
 const UserModel = require('./models/User');
@@ -55,7 +56,8 @@ app.post('/admin/add', (req, res) => {
 });
 
 app.post('/admin/find', (req, res) => {
-    ProductModel.find({ companyId: req.body.companyId })
+    const { companyId } = req.body
+    ProductModel.find(companyId ? { companyId } : {})
         .then(products => {
             res.json(products);
         })
@@ -77,9 +79,23 @@ app.post('/admin/update', (req, res) => {
     const { _id, companyId, category, image, barkod, name, price, date } =
         req.body;
 
+    const updateFields = {
+        companyId,
+        category,
+        barkod,
+        name,
+        price,
+        date
+    };
+
+    if (image) {
+        updateFields.image = image;
+    }
+
+
     ProductModel.findByIdAndUpdate(
         { _id },
-        { companyId, category, image, barkod, name, price, date },
+        updateFields,
         { new: true },
     )
         .then(product => {
@@ -120,7 +136,7 @@ app.post('/admin/upload', upload.single('file'), (req, res) => {
     });
 
 });
-app.post('/admin/run', (req, res) => {
+app.post('/user/upload', upload2.single('file'), (req, res) => {
     /*const imageId = "ca03439b03ff770e14001529104437a6"
     exec(`python3 video_front_end.py ${imageId}`, (error, stdout, stderr) => {
         if (error) {
@@ -151,8 +167,12 @@ app.post('/admin/run', (req, res) => {
         const numpyArray = JSON.parse(numpyArrayString);
         console.log(numpyArray);
     });*/
-    const imageId = "fbc6434bec24b2391d3ee399baebc74b";
-    exec(`python3 video_front_end.py single ${imageId}`, (error, stdout, stderr) => {
+
+
+    //********************************************************************* */
+    const fileName = req.file.filename;
+    const filePath = req.file.path;
+    exec(`python3 video_front_end.py single ${fileName}`, (error, stdout, stderr) => {
         if (error) {
             console.error(`Hata oluştu: ${error.message}`);
             return;
@@ -161,12 +181,14 @@ app.post('/admin/run', (req, res) => {
             console.error(`Hata çıktısı: ${stderr}`);
             return;
         }
+        res.json(stdout);
         console.log(stdout);
     });
 
 });
 
 app.use('/uploads', express.static('uploads'));
+app.use('/uploads2', express.static('uploads2'));
 
 //************************************************************************* */
 
